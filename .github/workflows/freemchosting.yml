@@ -56,8 +56,8 @@ jobs:
       - name: 执行脚本
         env:
           PYTHONIOENCODING: utf-8
-          COOKIE: ${{ secrets.COOKIE }}
           COOKIE2: ${{ secrets.COOKIE2 }}
+          COOKIE3: ${{ secrets.COOKIE3 }}
           TG_TOKEN: ${{ secrets.TG_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
           PROXY: socks5://127.0.0.1:8080
