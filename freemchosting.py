@@ -10,8 +10,8 @@ from playwright.sync_api import sync_playwright
 
 # ================= ENV =================
 PROXY_URL = os.getenv("PROXY", "")
-COOKIE = os.getenv("COOKIE") # 对应remember_web_59ba36addc2b2f9401580f014c7f58ea4e30989d=的cookies
 COOKIE2 = os.getenv("COOKIE2") # 对应paymenter_remember=的cookies
+COOKIE3 = os.getenv("COOKIE3") # 对应paymenter_session=的cookies
 TG_TOKEN = os.getenv("TG_TOKEN")
 TG_CHAT_ID = os.getenv("TG_CHAT_ID")
 
@@ -133,14 +133,14 @@ class FreemchostingClaimPW:
 
             context.add_cookies([
                 {
-                    "name": "remember_web",
-                    "value": COOKIE,
+                    "name": "paymenter_remember",
+                    "value": COOKIE2,
                     "domain": "client.freemchosting.com",
                     "path": "/"
                 },
                 {
-                    "name": "paymenter_remember",
-                    "value": COOKIE2,
+                    "name": "paymenter_session",
+                    "value": COOKIE3,
                     "domain": "client.freemchosting.com",
                     "path": "/"
                 }
