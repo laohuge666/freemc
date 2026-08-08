@@ -1,0 +1,65 @@
+name: Freemchosting Auto Claim Credit
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */2 * * *'
+
+jobs:
+  Claim_Credit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Action 检查
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: 安装 Python 软件包
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright requests
+
+      - name: 安装 Playwright 浏览器
+        run: |
+          playwright install chromium
+          playwright install-deps chromium
+
+      - name: 安装 xvfb
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+
+      - name: 设置[sing-box]代理转发
+        env:
+          PROXY_STR: ${{ secrets.PROXY }}
+        run: |
+          wget -q https://github.com/SagerNet/sing-box/releases/download/v1.8.10/sing-box-1.8.10-linux-amd64.tar.gz
+          tar -xzf sing-box-1.8.10-linux-amd64.tar.gz
+          chmod +x sing-box-1.8.10-linux-amd64/sing-box
+
+          python generate_singbox_config.py
+
+          ./sing-box-1.8.10-linux-amd64/sing-box check -c config.json
+
+          nohup ./sing-box-1.8.10-linux-amd64/sing-box run -c config.json > singbox.log 2>&1 &
+
+          sleep 8
+
+          curl --connect-timeout 10 \
+            -x socks5h://127.0.0.1:8080 \
+            https://api.ipify.org || true
+
+      - name: 执行脚本
+        env:
+          PYTHONIOENCODING: utf-8
+          COOKIE: ${{ secrets.COOKIE }}
+          COOKIE2: ${{ secrets.COOKIE2 }}
+          TG_TOKEN: ${{ secrets.TG_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          PROXY: socks5://127.0.0.1:8080
+        run: |
+          xvfb-run -a python freemchosting.py
