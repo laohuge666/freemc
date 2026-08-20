@@ -107,26 +107,27 @@ def generate_config(proxy_url):
 
     elif scheme == "vmess":
         # 两种格式:
-        #   1) vmess://base64(json_config)  — 旧版
+        #   1) vmess://base64(json_config)  — 旧版(标准 base64 含 +/ 字符,不能用 urlparse 的 netloc!会被 / 截断)
         #   2) vmess://uuid@host:port?type=ws&security=tls&... — 新版明文(v2rayN 导出)
         try:
             v_info = None
-            raw = parsed.netloc.split('#')[0]
+            body = proxy_url.split("://", 1)[1].split("#")[0]
             # 格式1:base64(JSON),容忍 base64url 字符与 padding 缺失
             try:
-                b64 = raw.replace('-', '+').replace('_', '/')
+                b64 = body.replace('-', '+').replace('_', '/')
                 b64 += '=' * (-len(b64) % 4)
                 v_info = json.loads(base64.b64decode(b64).decode())
             except Exception:
                 pass
             if v_info is None:
                 # 格式2:明文 uuid@host:port?query
-                params = parse_qs(parsed.query)
+                parsed2 = urlparse("vmess://" + body)
+                params = parse_qs(parsed2.query)
                 sec = params.get("security", ["none"])[0]
                 v_info = {
-                    "add": parsed.hostname,
-                    "port": str(parsed.port or 443),
-                    "id": unquote(parsed.username or ""),
+                    "add": parsed2.hostname,
+                    "port": str(parsed2.port or 443),
+                    "id": unquote(parsed2.username or ""),
                     "net": params.get("type", ["tcp"])[0],
                     "security": sec,
                     "tls": "tls" if sec in ["tls", "reality"] else "",
