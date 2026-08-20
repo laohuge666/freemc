@@ -287,6 +287,31 @@ def click_js(sb, sel):
     sb.execute_script(js)
 
 
+def inject_cookies(sb):
+    try:
+        sb.driver.add_cookie({"name": "paymenter_remember", "value": COOKIE2, "domain": "client.freemchosting.com", "path": "/"})
+        sb.driver.add_cookie({"name": "paymenter_session", "value": COOKIE3, "domain": "client.freemchosting.com", "path": "/"})
+        return True
+    except Exception:
+        return False
+
+
+def nav_with_cookie(sb, url, name="nav"):
+    """UC 导航 + 弹回登录页时重注入 cookie 重试(UC 模式的导航可能清空 cookie 存储)"""
+    sb.uc_open_with_reconnect(url, reconnect_time=5)
+    time.sleep(3)
+    cur = sb.get_current_url()
+    log(f"{name} URL: {cur}")
+    if "login" in cur and "login" not in url:
+        log(f"⚠️ {name} 弹回登录页,重注入 cookie...")
+        inject_cookies(sb)
+        sb.uc_open_with_reconnect(url, reconnect_time=5)
+        time.sleep(4)
+        cur = sb.get_current_url()
+        log(f"{name} 重试 URL: {cur}")
+    return cur
+
+
 def run():
     log("🚀 Freemchosting UC 版启动")
     sb_args = {}
@@ -308,32 +333,18 @@ def run():
         sb.uc_open_with_reconnect(MAIN_URL, reconnect_time=5)
         time.sleep(random.uniform(3, 5))
         log(f"主站 URL: {sb.get_current_url()}")
-        sb.driver.add_cookie({"name": "paymenter_remember", "value": COOKIE2, "domain": "client.freemchosting.com", "path": "/"})
-        sb.driver.add_cookie({"name": "paymenter_session", "value": COOKIE3, "domain": "client.freemchosting.com", "path": "/"})
+        inject_cookies(sb)
         time.sleep(1)
         try:
             cks = [x["name"] for x in sb.driver.get_cookies()]
             log(f"注入后 cookies: {cks}")
-        except Exception as e:
-            log(f"读 cookies 失败: {e}")
-        sb.driver.get(DASHBOARD_URL)
-        time.sleep(random.uniform(4, 6))
-        log(f"面板 URL: {sb.get_current_url()}")
-        if "login" in sb.get_current_url():
-            log("⚠️ 被弹回登录页,重试一次...")
-            sb.driver.get(DASHBOARD_URL)
-            time.sleep(5)
-            log(f"重试后 URL: {sb.get_current_url()}")
-            try:
-                cks = [x["name"] for x in sb.driver.get_cookies()]
-                log(f"重试后 cookies: {cks}")
-            except Exception:
-                pass
+        except Exception:
+            pass
+        nav_with_cookie(sb, DASHBOARD_URL, "面板")
 
         # Credit
         log("📂 进入Credit面板")
-        sb.driver.get(Credit_URL)
-        time.sleep(random.uniform(4, 6))
+        nav_with_cookie(sb, Credit_URL, "Credit")
         try:
             sb.wait_for_element("p.text-primary-100", timeout=30)
             texts = [t.text for t in sb.find_elements("p.text-primary-100")]
@@ -350,8 +361,7 @@ def run():
 
         # 奖励页
         log("📂 进入奖励面板")
-        sb.driver.get(TARGET_URL)
-        time.sleep(random.uniform(4, 6))
+        nav_with_cookie(sb, TARGET_URL, "奖励")
 
         # Generate Offer
         log("🔗 生成广告链接")
@@ -458,8 +468,7 @@ def run():
 
         # Credit after
         try:
-            sb.uc_open_with_reconnect(Credit_URL, reconnect_time=5)
-            time.sleep(4)
+            nav_with_cookie(sb, Credit_URL, "Credit-after")
             sb.wait_for_element("p.text-primary-100", timeout=30)
             texts = [t.text for t in sb.find_elements("p.text-primary-100")]
             total = 0
