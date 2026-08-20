@@ -8,6 +8,7 @@ on:
 jobs:
   Claim_Credit:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Action 检查
@@ -16,22 +17,18 @@ jobs:
       - name: 设置 Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.11"
 
       - name: 安装 Python 软件包
         run: |
           python -m pip install --upgrade pip
-          pip install playwright requests
+          pip install seleniumbase Pillow requests
+          seleniumbase install chromedriver
 
-      - name: 安装 Playwright 浏览器
+      - name: 安装系统依赖
         run: |
-          playwright install chromium
-          playwright install-deps chromium
-
-      - name: 安装 xvfb
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y xvfb
+          sudo apt-get update -qq
+          sudo apt-get install -y xdotool scrot xvfb
 
       - name: 设置[sing-box]代理转发
         env:
@@ -57,7 +54,7 @@ jobs:
           cat singbox.log || true
           echo "===== singbox.log end ====="
 
-      - name: 执行脚本
+      - name: 执行脚本(UC 反检测)
         env:
           PYTHONIOENCODING: utf-8
           COOKIE2: ${{ secrets.COOKIE2 }}
@@ -66,4 +63,7 @@ jobs:
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
           PROXY: socks5://127.0.0.1:8080
         run: |
-          xvfb-run -a python freemchosting.py
+          export DISPLAY=:99
+          Xvfb :99 -screen 0 1920x1080x24 &
+          sleep 2
+          python freemchosting.py

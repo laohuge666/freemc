@@ -1,0 +1,6 @@
+[36mINFO[0m[0000] router: updated default interface eth0, index 2
+[36mINFO[0m[0000] inbound/mixed[mixed-in]: tcp server started at 127.0.0.1:8080
+[36mINFO[0m[0000] sing-box started (0.00s)
+[36mINFO[0m[0005] [[38;5;86m168631953[0m 0ms] inbound/mixed[mixed-in]: inbound connection from 127.0.0.1:57376
+[36mINFO[0m[0005] [[38;5;86m168631953[0m 0ms] inbound/mixed[mixed-in]: inbound connection to api.ipify.org:443
+[36mINFO[0m[0005] [[38;5;86m168631953[0m 0ms] outbound/vmess[proxy]: outbound connection to api.ipify.org:443
