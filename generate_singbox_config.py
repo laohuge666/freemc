@@ -62,23 +62,45 @@ def generate_config(proxy_url):
         outbound["server"] = parsed.hostname
         outbound["server_port"] = parsed.port
         outbound["uuid"] = unquote(parsed.username or "")
-        
         params = parse_qs(parsed.query)
-        outbound["flow"] = params.get("flow", [""])[0]
-        
-        tls_enabled = params.get("security", [""])[0] in ["tls", "reality"]
-        if tls_enabled:
-            outbound["tls"] = {"enabled": True}
-            if "sni" in params: outbound["tls"]["server_name"] = params["sni"][0]
-            if "fp" in params: outbound["tls"]["utls"] = {"enabled": True, "fingerprint": params["fp"][0]}
-            if "pbk" in params: outbound["tls"]["reality"] = {"enabled": True, "public_key": params["pbk"][0], "short_id": params.get("sid", [""])[0]}
-        
-        # 传输层配置
-        network = params.get("type", ["tcp"])[0]
-        if network == "ws":
-            outbound["transport"] = {"type": "ws", "path": params.get("path", ["/"])[0], "headers": {"Host": params.get("host", [""])[0]}}
-        elif network == "grpc":
-            outbound["transport"] = {"type": "grpc", "service_name": params.get("serviceName", [""])[0]}
+        if params.get("flow"):
+            outbound["flow"] = params["flow"][0]
+        sec = params.get("security", ["none"])[0]
+        if sec in ["tls", "reality"] or params.get("tls", ["none"])[0] == "tls":
+            outbound["tls"] = {
+                "enabled": True,
+                "server_name": params.get("sni", [""])[0] or params.get("host", [""])[0] or parsed.hostname
+            }
+            if params.get("fp"):
+                outbound["tls"]["utls"] = {"enabled": True, "fingerprint": params["fp"][0]}
+            if params.get("alpn"):
+                outbound["tls"]["alpn"] = [x for x in params["alpn"][0].split(",") if x]
+            if sec == "reality" or params.get("pbk"):
+                outbound["tls"]["reality"] = {
+                    "enabled": True,
+                    "public_key": params.get("pbk", [""])[0],
+                    "short_id": params.get("sid", [""])[0]
+                }
+        net = params.get("type", ["tcp"])[0]
+        if net == "ws":
+            ws_path = params.get("path", ["/"])[0]
+            ws_transport = {
+                "type": "ws",
+                "path": ws_path,
+                "headers": {"Host": params.get("host", [""])[0] or params.get("sni", [""])[0] or parsed.hostname}
+            }
+            if "?" in ws_path:
+                path_only, query = ws_path.split("?", 1)
+                ws_transport["path"] = path_only or "/"
+                ws_params = parse_qs(query)
+                if ws_params.get("ed"):
+                    ws_transport["max_early_data"] = int(ws_params["ed"][0])
+                    ws_transport["early_data_header_name"] = "Sec-WebSocket-Protocol"
+            outbound["transport"] = ws_transport
+        elif net == "grpc":
+            outbound["transport"] = {"type": "grpc", "service_name": params.get("serviceName", [""])[0] or params.get("path", [""])[0]}
+        elif net == "tcp" and params.get("host"):
+            outbound["transport"] = {"type": "http", "host": [params["host"][0]], "path": params.get("path", ["/"])[0]}
 
     elif scheme == "trojan":
         outbound["type"] = "trojan"
