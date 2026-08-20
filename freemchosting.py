@@ -122,13 +122,13 @@ class FreemchostingClaimPW:
 
             # ================= IP =================
             self.log("🌍 检查出口IP")
-            page.goto("https://api.ipify.org?format=json")
+            page.goto("https://api.ipify.org?format=json", timeout=60000)
             ip = json.loads(page.text_content("body"))["ip"]
             self.log(f"IP: {ip}")
 
             # ================= LOGIN =================
             self.log("🔗 进入主站")
-            page.goto(MAIN_URL, wait_until="domcontentloaded")
+            page.goto(MAIN_URL, wait_until="domcontentloaded", timeout=90000)
             self.human_wait()
 
             context.add_cookies([
@@ -148,13 +148,19 @@ class FreemchostingClaimPW:
 
             # ================= DASHBOARD =================
             self.log("📂 进入账户面板")
-            page.goto(DASHBOARD_URL, wait_until="domcontentloaded")
+            for _try in range(3):
+                try:
+                    page.goto(DASHBOARD_URL, wait_until="domcontentloaded", timeout=90000)
+                    break
+                except Exception as e:
+                    self.log(f"⚠️ 面板加载失败(第{_try+1}次): {str(e)[:80]}")
+                    time.sleep(8)
             self.human_wait()
             #self.dump_debug(page, "dashboard", "dashboard loaded")
 
             # ================= Credit =================
             self.log("📂 进入账户Credit面板")
-            page.goto(Credit_URL, wait_until="domcontentloaded")
+            page.goto(Credit_URL, wait_until="domcontentloaded", timeout=90000)
             self.human_wait()
             credit_before = self.get_credit(page)
             if credit_before is None:
@@ -165,7 +171,7 @@ class FreemchostingClaimPW:
             
             # ================= REWARD =================
             self.log("📂 进入账户奖励面板")
-            page.goto(TARGET_URL, wait_until="domcontentloaded")
+            page.goto(TARGET_URL, wait_until="domcontentloaded", timeout=90000)
             self.human_wait()
             #self.dump_debug(page, "reward", "reward loaded")
 
@@ -351,7 +357,7 @@ class FreemchostingClaimPW:
 
             # ================= Credit =================
             self.log("📂 再次进入账户Credit面板")
-            page.goto(Credit_URL, wait_until="domcontentloaded")
+            page.goto(Credit_URL, wait_until="domcontentloaded", timeout=90000)
             self.human_wait()
             credit_after = self.get_credit(page)
             #self.dump_debug(page, "Credit", "Credit loaded")
