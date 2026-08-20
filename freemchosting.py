@@ -311,13 +311,13 @@ def run():
         sb.driver.add_cookie({"name": "paymenter_remember", "value": COOKIE2, "domain": "client.freemchosting.com", "path": "/"})
         sb.driver.add_cookie({"name": "paymenter_session", "value": COOKIE3, "domain": "client.freemchosting.com", "path": "/"})
         time.sleep(1)
-        sb.uc_open_with_reconnect(DASHBOARD_URL, reconnect_time=5)
+        sb.driver.get(DASHBOARD_URL)
         time.sleep(random.uniform(4, 6))
         log(f"面板 URL: {sb.get_current_url()}")
 
         # Credit
         log("📂 进入Credit面板")
-        sb.uc_open_with_reconnect(Credit_URL, reconnect_time=5)
+        sb.driver.get(Credit_URL)
         time.sleep(random.uniform(4, 6))
         try:
             sb.wait_for_element("p.text-primary-100", timeout=30)
@@ -335,7 +335,7 @@ def run():
 
         # 奖励页
         log("📂 进入奖励面板")
-        sb.uc_open_with_reconnect(TARGET_URL, reconnect_time=5)
+        sb.driver.get(TARGET_URL)
         time.sleep(random.uniform(4, 6))
 
         # Generate Offer
