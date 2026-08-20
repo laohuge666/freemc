@@ -53,6 +53,10 @@ jobs:
             -x socks5h://127.0.0.1:8080 \
             https://api.ipify.org || true
 
+          echo "===== singbox.log ====="
+          cat singbox.log || true
+          echo "===== singbox.log end ====="
+
       - name: 执行脚本
         env:
           PYTHONIOENCODING: utf-8
