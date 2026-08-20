@@ -264,7 +264,7 @@ def log(msg):
 def wait_el(sb, sel, timeout=30):
     """JS 轮询等待元素;'//' 开头按 XPath(UC/CDP 模式必须用 JS)"""
     if sel.startswith(("//", "./", "(")):
-        js = f"return document.evaluate('{sel}', document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue !== null"
+        js = f"return document.evaluate(\"{sel}\", document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue !== null"
     else:
         js = f"return document.querySelectorAll('{sel}').length > 0"
     deadline = time.time() + timeout
@@ -281,7 +281,7 @@ def wait_el(sb, sel, timeout=30):
 def click_js(sb, sel):
     """JS 点击(滚动 + click)"""
     if sel.startswith(("//", "./", "(")):
-        js = f"""var e = document.evaluate('{sel}', document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue; if (e) {{ e.scrollIntoView({{block:'center'}}); e.click(); }}"""
+        js = f"""var e = document.evaluate("{sel}", document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue; if (e) {{ e.scrollIntoView({{block:'center'}}); e.click(); }}"""
     else:
         js = f"""var e = document.querySelector('{sel}'); if (e) {{ e.scrollIntoView({{block:'center'}}); e.click(); }}"""
     sb.execute_script(js)
