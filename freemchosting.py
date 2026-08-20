@@ -363,13 +363,29 @@ def run():
         log("📂 进入奖励面板")
         nav_with_cookie(sb, TARGET_URL, "奖励")
 
+        # 诊断:枚举页面按钮/链接/标题
+        try:
+            btns = sb.execute_script("return [...document.querySelectorAll('button')].map(b => (b.textContent||'').trim()).filter(Boolean)")
+            log(f"按钮列表: {btns[:25]}")
+        except Exception as e:
+            log(f"按钮枚举失败: {e}")
+        try:
+            links = sb.execute_script("return [...document.querySelectorAll('a')].map(a => (a.textContent||'').trim()).filter(Boolean)")
+            log(f"链接列表: {links[:25]}")
+        except Exception:
+            pass
+        try:
+            log(f"奖励页 title: {sb.get_title()}")
+        except Exception:
+            pass
+
         # Generate Offer
         log("🔗 生成广告链接")
-        if not wait_el(sb, "//button[contains(text(),'Generate Offer')]", timeout=30):
+        if not wait_el(sb, "//button[contains(., 'Generate Offer')]", timeout=60):
             log("❌ Generate Offer 按钮未找到")
             sb.save_screenshot("debug_gen_fail.png")
-            return
-        click_js(sb, "//button[contains(text(),'Generate Offer')]")
+            sys.exit(1)
+        click_js(sb, "//button[contains(., 'Generate Offer')]")
         time.sleep(random.uniform(5, 8))
 
         # Start
