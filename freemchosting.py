@@ -189,7 +189,7 @@ class FreemchostingClaimPW:
             page.wait_for_selector("#taskList .task", timeout=60000)
             page.click("#taskList .task[data-i='0']")
             self.log("⏳ 等待文章任务完成(约50秒)...")
-            for _ in range(18):
+            for _ in range(30):
                 time.sleep(10)
                 try:
                     cls = page.evaluate("() => document.querySelector('#taskList .task[data-i=\"0\"]')?.className || ''")
@@ -202,9 +202,14 @@ class FreemchostingClaimPW:
             # ================= HUMAN VERIFY =================
             self.log("🎯 点击人机验证任务(Confirm you are human)")
             try:
-                page.click("#taskList .task[data-i='1']")
+                el = page.locator("#taskList .task[data-i='1']")
+                el.scroll_into_view_if_needed(timeout=10000)
+                el.click(force=True, timeout=15000)
             except Exception:
-                page.click("div.task:has-text('Confirm')")
+                try:
+                    page.evaluate("document.querySelector('#taskList .task[data-i=\"1\"]')?.click()")
+                except Exception:
+                    page.click("div.task:has-text('Confirm')", force=True)
             self.log("⏳ 等待 Turnstile 验证码...")
             frame = None
             # 1) 先等 iframe 元素出现在 DOM(未触发的 iframe 不在 page.frames 里)
