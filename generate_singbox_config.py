@@ -106,17 +106,50 @@ def generate_config(proxy_url):
                 outbound["password"] = unquote(parsed.password or "")
 
     elif scheme == "vmess":
-        # vmess://base64(json_config)
+        # 两种格式:
+        #   1) vmess://base64(json_config)  — 旧版
+        #   2) vmess://uuid@host:port?type=ws&security=tls&... — 新版明文(v2rayN 导出)
         try:
-            v_info = json.loads(base64.b64decode(parsed.netloc + "==").decode())
+            v_info = None
+            raw = parsed.netloc.split('#')[0]
+            # 格式1:base64(JSON),容忍 base64url 字符与 padding 缺失
+            try:
+                b64 = raw.replace('-', '+').replace('_', '/')
+                b64 += '=' * (-len(b64) % 4)
+                v_info = json.loads(base64.b64decode(b64).decode())
+            except Exception:
+                pass
+            if v_info is None:
+                # 格式2:明文 uuid@host:port?query
+                params = parse_qs(parsed.query)
+                sec = params.get("security", ["none"])[0]
+                v_info = {
+                    "add": parsed.hostname,
+                    "port": str(parsed.port or 443),
+                    "id": unquote(parsed.username or ""),
+                    "net": params.get("type", ["tcp"])[0],
+                    "security": sec,
+                    "tls": "tls" if sec in ["tls", "reality"] else "",
+                    "path": params.get("path", [""])[0],
+                    "host": params.get("host", [""])[0],
+                    "sni": params.get("sni", [""])[0],
+                    "fp": params.get("fp", [""])[0],
+                    "alpn": params.get("alpn", [""])[0],
+                    "flow": params.get("flow", [""])[0],
+                    "pbk": params.get("pbk", [""])[0],
+                    "sid": params.get("sid", [""])[0],
+                }
             outbound["type"] = "vmess"
             outbound["server"] = v_info.get("add")
             outbound["server_port"] = int(v_info.get("port", 443))
             outbound["uuid"] = v_info.get("id")
             outbound["security"] = v_info.get("scy") or v_info.get("security") or "auto"
             outbound["alter_id"] = int(v_info.get("aid", 0))
+            if v_info.get("flow"):
+                outbound["flow"] = v_info["flow"]
 
-            if v_info.get("tls") == "tls":
+            tls_on = v_info.get("tls") == "tls" or v_info.get("security") in ["tls", "reality"]
+            if tls_on:
                 outbound["tls"] = {
                     "enabled": True,
                     "server_name": v_info.get("sni") or v_info.get("host") or v_info.get("add")
@@ -125,8 +158,15 @@ def generate_config(proxy_url):
                     outbound["tls"]["utls"] = {"enabled": True, "fingerprint": v_info.get("fp")}
                 if v_info.get("alpn"):
                     outbound["tls"]["alpn"] = [x for x in v_info.get("alpn", "").split(",") if x]
+                if v_info.get("security") == "reality" or v_info.get("pbk"):
+                    outbound["tls"]["reality"] = {
+                        "enabled": True,
+                        "public_key": v_info.get("pbk", ""),
+                        "short_id": v_info.get("sid", "")
+                    }
 
-            if v_info.get("net") == "ws":
+            net = v_info.get("net")
+            if net == "ws":
                 ws_path = v_info.get("path") or "/"
                 ws_headers = {"Host": v_info.get("host") or v_info.get("sni") or v_info.get("add")}
                 ws_transport = {
@@ -144,8 +184,10 @@ def generate_config(proxy_url):
                 outbound["transport"] = {
                     **ws_transport
                 }
-            elif v_info.get("net") == "grpc":
+            elif net == "grpc":
                 outbound["transport"] = {"type": "grpc", "service_name": v_info.get("path", "")}
+            elif net == "tcp" and v_info.get("host"):
+                outbound["transport"] = {"type": "http", "host": [v_info.get("host")], "path": v_info.get("path") or "/"}
         except:
             print("Failed to parse VMess config")
             sys.exit(1)
