@@ -1,5 +1,6 @@
 # freemchosting UC 版 — SeleniumBase undetected Chrome + xdotool 物理点击(参考 zampto 方案)
 import os
+import sys
 import time
 import json
 import random
@@ -297,25 +298,26 @@ def run():
 
         # IP 检查
         try:
-            sb.open("https://api.ipify.org/?format=json", timeout=30)
+            sb.uc_open_with_reconnect("https://api.ipify.org/?format=json", reconnect_time=4)
             log(f"当前 IP: {sb.get_text('body')}")
         except Exception as e:
             log(f"IP 检查失败: {e}")
 
         # 登录态
         log("🔗 进入主站")
-        sb.open(MAIN_URL, timeout=60)
+        sb.uc_open_with_reconnect(MAIN_URL, reconnect_time=5)
         time.sleep(random.uniform(3, 5))
+        log(f"主站 URL: {sb.get_current_url()}")
         sb.driver.add_cookie({"name": "paymenter_remember", "value": COOKIE2, "domain": "client.freemchosting.com", "path": "/"})
         sb.driver.add_cookie({"name": "paymenter_session", "value": COOKIE3, "domain": "client.freemchosting.com", "path": "/"})
         time.sleep(1)
-        sb.open(DASHBOARD_URL, timeout=60)
+        sb.uc_open_with_reconnect(DASHBOARD_URL, reconnect_time=5)
         time.sleep(random.uniform(4, 6))
         log(f"面板 URL: {sb.get_current_url()}")
 
         # Credit
         log("📂 进入Credit面板")
-        sb.open(Credit_URL, timeout=60)
+        sb.uc_open_with_reconnect(Credit_URL, reconnect_time=5)
         time.sleep(random.uniform(4, 6))
         try:
             sb.wait_for_element("p.text-primary-100", timeout=30)
@@ -329,11 +331,11 @@ def run():
         except Exception as e:
             log(f"Credit 读取失败(可能 cookie 无效): {e}")
             sb.save_screenshot("debug_credit_fail.png")
-            return
+            sys.exit(1)
 
         # 奖励页
         log("📂 进入奖励面板")
-        sb.open(TARGET_URL, timeout=60)
+        sb.uc_open_with_reconnect(TARGET_URL, reconnect_time=5)
         time.sleep(random.uniform(4, 6))
 
         # Generate Offer
@@ -441,7 +443,7 @@ def run():
 
         # Credit after
         try:
-            sb.open(Credit_URL, timeout=60)
+            sb.uc_open_with_reconnect(Credit_URL, reconnect_time=5)
             time.sleep(4)
             sb.wait_for_element("p.text-primary-100", timeout=30)
             texts = [t.text for t in sb.find_elements("p.text-primary-100")]
