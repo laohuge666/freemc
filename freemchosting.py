@@ -184,19 +184,88 @@ class FreemchostingClaimPW:
             #self.dump_debug(page, "Click Start", "Click Start")
 
             # ================= TASK =================
-            self.log("🎯 点击广告内任务")
+            self.log("🎯 点击广告内任务(文章)")
             page.wait_for_selector("#taskList", timeout=60000)
             page.wait_for_selector("#taskList .task", timeout=60000)
-            #self.dump_debug(page, "task_loaded", "task ready")
-            page.click("#taskList .task")
-            time.sleep(5)
+            page.click("#taskList .task[data-i='0']")
+            self.log("⏳ 等待文章任务完成(约50秒)...")
+            for _ in range(18):
+                time.sleep(10)
+                try:
+                    cls = page.evaluate("() => document.querySelector('#taskList .task[data-i=\"0\"]')?.className || ''")
+                    if "done" in cls:
+                        self.log("✅ 文章任务完成")
+                        break
+                except Exception:
+                    pass
+
+            # ================= HUMAN VERIFY =================
+            self.log("🎯 点击人机验证任务(Confirm you are human)")
+            try:
+                page.click("#taskList .task[data-i='1']")
+            except Exception:
+                page.click("div.task:has-text('Confirm')")
+            self.log("⏳ 等待 Turnstile 验证码...")
+            frame = None
+            # 1) 先等 iframe 元素出现在 DOM(未触发的 iframe 不在 page.frames 里)
+            try:
+                page.wait_for_selector('iframe[src*="captcha"], iframe[src*="nerventual"], iframe[src*="verify"], iframe[src*="turnstile"]', timeout=120000)
+                self.log("✅ captcha iframe 元素已出现")
+            except Exception as e:
+                self.log(f"⚠️ iframe 元素未出现: {e}")
+            # 2) 从 frames 枚举
+            for f in page.frames:
+                if "captcha" in f.url or "nerventual" in f.url or "verify" in f.url:
+                    frame = f
+                    break
+            # 3) 兜底:用 frame_element().content_frame()
+            if not frame:
+                try:
+                    el = page.query_selector('iframe[src*="captcha"], iframe[src*="nerventual"], iframe[src*="verify"]')
+                    if el:
+                        for _ in range(12):  # 等 content_frame 就绪(最长 60s)
+                            frame = el.content_frame()
+                            if frame:
+                                break
+                            time.sleep(5)
+                except Exception:
+                    pass
+            if not frame:
+                self.log("❌ 未找到验证码 iframe")
+                all_frames = [f.url[:120] for f in page.frames]
+                self.log(f"当前 frames: {all_frames}")
+                self.dump_debug(page, "captcha_iframe_missing")
+            else:
+                self.log(f"✅ 验证码 iframe: {frame.url[:80]}")
+                try:
+                    frame.wait_for_function(
+                        "() => { const b = document.querySelector('#go'); return b && !b.disabled; }",
+                        timeout=150000
+                    )
+                    self.log("🎉 Turnstile 通过,点击 Continue")
+                    frame.click("#go")
+                except Exception as e:
+                    self.log(f"❌ Turnstile 超时/失败: {e}")
+                    self.dump_debug(page, "turnstile_fail")
+            # 等人机验证任务 done
+            for _ in range(12):
+                time.sleep(10)
+                try:
+                    cls = page.evaluate("() => document.querySelector('#taskList .task[data-i=\"1\"]')?.className || ''")
+                    if "done" in cls:
+                        self.log("✅ 人机验证完成")
+                        break
+                except Exception:
+                    pass
+
+            # ================= CLAIM =================
             self.log("⏳ Waiting Claim Reward available...")
             page.wait_for_function("""
             () => {
                 const btn = document.querySelector("#unlockBtn");
                 return btn && !btn.disabled;
             }
-            """, timeout=300000)   # 最长等5分钟
+            """, timeout=120000)   # 任务完成后解锁
             self.log("🎉 Claim Reward")
             page.locator("#unlockBtn").click()
             time.sleep(5)
