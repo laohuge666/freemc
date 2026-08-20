@@ -311,9 +311,24 @@ def run():
         sb.driver.add_cookie({"name": "paymenter_remember", "value": COOKIE2, "domain": "client.freemchosting.com", "path": "/"})
         sb.driver.add_cookie({"name": "paymenter_session", "value": COOKIE3, "domain": "client.freemchosting.com", "path": "/"})
         time.sleep(1)
+        try:
+            cks = [x["name"] for x in sb.driver.get_cookies()]
+            log(f"注入后 cookies: {cks}")
+        except Exception as e:
+            log(f"读 cookies 失败: {e}")
         sb.driver.get(DASHBOARD_URL)
         time.sleep(random.uniform(4, 6))
         log(f"面板 URL: {sb.get_current_url()}")
+        if "login" in sb.get_current_url():
+            log("⚠️ 被弹回登录页,重试一次...")
+            sb.driver.get(DASHBOARD_URL)
+            time.sleep(5)
+            log(f"重试后 URL: {sb.get_current_url()}")
+            try:
+                cks = [x["name"] for x in sb.driver.get_cookies()]
+                log(f"重试后 cookies: {cks}")
+            except Exception:
+                pass
 
         # Credit
         log("📂 进入Credit面板")
